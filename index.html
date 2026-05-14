@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>ZanxAI — Asisten Cerdas Generasi Baru</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    :root {
+      --bg-deep: #05020a;
+      --bg-surface: #0b0815;
+      --card-bg: rgba(18, 14, 30, 0.75);
+      --glass-edge: rgba(139, 92, 246, 0.25);
+      --accent-primary: #a78bfa;
+      --accent-glow: #c084fc;
+      --accent-secondary: #38bdf8;
+      --text-white: #f1f0ff;
+      --text-dim: #a8a3c2;
+      --text-muted: #5e5a7a;
+      --success-glow: #4ade80;
+      --border-subtle: rgba(139, 92, 246, 0.2);
+    }
+
+    body {
+      background: radial-gradient(ellipse at 20% 30%, #0e0a1f 0%, var(--bg-deep) 100%);
+      font-family: 'Inter', sans-serif;
+      height: 100dvh;
+      overflow: hidden;
+      color: var(--text-white);
+    }
+
+    /* backdrop blur & noise */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(circle at 30% 50%, rgba(139, 92, 246, 0.08) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.025'/%3E%3C/svg%3E");
+      pointer-events: none;
+      opacity: 0.5;
+      z-index: 0;
+    }
+
+    /* splash intro */
+    .intro-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: radial-gradient(ellipse at center, #0a0720 0%, #020108 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+      transition: opacity 1.2s cubic-bezier(0.23, 1, 0.32, 1), visibility 0.3s;
+      will-change: opacity;
+      font-family: 'Space Grotesk', monospace;
+    }
+
+    .intro-content {
+      text-align: center;
+      animation: floatIntro 0.9s ease-out;
+      transform-origin: center;
+    }
+
+    @keyframes floatIntro {
+      0% { opacity: 0; transform: scale(0.94) translateY(18px); filter: blur(8px);}
+      100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0);}
+    }
+
+    .intro-logo {
+      width: 110px;
+      height: 110px;
+      margin: 0 auto 24px;
+      position: relative;
+    }
+
+    .intro-logo .ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 32px;
+      border: 2px solid rgba(167, 139, 250, 0.6);
+      box-shadow: 0 0 20px rgba(167, 139, 250, 0.4);
+      animation: spinReveal 6s linear infinite;
+    }
+
+    @keyframes spinReveal {
+      to { transform: rotate(360deg); }
+    }
+
+    .intro-logo .core {
+      position: absolute;
+      inset: 12px;
+      background: linear-gradient(135deg, #a855f7, #3b82f6);
+      border-radius: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      box-shadow: 0 8px 32px rgba(139, 92, 246, 0.5);
+    }
+
+    .intro-text {
+      font-size: 2.4rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: linear-gradient(120deg, #ffffff, #c4b5fd, #a78bfa);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin-bottom: 12px;
+    }
+
+    .intro-sub {
+      color: var(--text-dim);
+      font-size: 0.9rem;
+      letter-spacing: 0.8px;
+      margin-bottom: 32px;
+    }
+
+    .intro-load-bar {
+      width: 200px;
+      height: 2px;
+      background: rgba(139, 92, 246, 0.2);
+      border-radius: 99px;
+      margin: 0 auto;
+      overflow: hidden;
+    }
+
+    .intro-load-fill {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+      border-radius: 99px;
+      animation: loadProgress 2.2s ease-out forwards;
+    }
+
+    @keyframes loadProgress {
+      0% { width: 0%; }
+      30% { width: 35%; }
+      80% { width: 88%; }
+      100% { width: 100%; }
+    }
+
+    /* main app */
+    .app-container {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      height: 100dvh;
+      opacity: 0;
+      transition: opacity 1s ease;
+    }
+
+    .app-container.visible {
+      opacity: 1;
+    }
+
+    /* header modern */
+    .glass-header {
+      backdrop-filter: blur(20px);
+      background: rgba(5, 3, 15, 0.65);
+      border-bottom: 1px solid var(--glass-edge);
+      padding: 0.9rem 1.8rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .brand-modern {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-icon {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(145deg, #6d28d9, #3b82f6);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      box-shadow: 0 8px 20px rgba(109, 40, 217, 0.5);
+    }
+
+    .brand-name {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      font-size: 1.5rem;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #f0f0ff, #b9a9ff);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .brand-badge {
+      font-size: 0.7rem;
+      background: rgba(167, 139, 250, 0.2);
+      padding: 4px 12px;
+      border-radius: 30px;
+      border: 0.5px solid rgba(167, 139, 250, 0.4);
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .icon-btn {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border-subtle);
+      border-radius: 40px;
+      padding: 8px 18px;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      cursor: pointer;
+      backdrop-filter: blur(4px);
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .icon-btn:hover {
+      border-color: var(--accent-primary);
+      color: var(--accent-primary);
+      background: rgba(139, 92, 246, 0.1);
+    }
+
+    /* Chat scroll */
+    .chat-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem 1.8rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      scroll-behavior: smooth;
+    }
+
+    /* WELCOME refined */
+    .welcome-modern {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      flex: 1;
+      gap: 1.4rem;
+      backdrop-filter: blur(2px);
+    }
+
+    .welcome-glow {
+      background: radial-gradient(ellipse 120px 120px at 50% 30%, rgba(139,92,246,0.25), transparent);
+      padding: 1rem;
+    }
+
+    .avatar-large {
+      width: 96px;
+      height: 96px;
+      background: linear-gradient(45deg, #8b5cf6, #2563eb);
+      border-radius: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 52px;
+      box-shadow: 0 18px 40px -8px rgba(139,92,246,0.6);
+      margin-bottom: 0.5rem;
+    }
+
+    .welcome-modern h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      background: linear-gradient(115deg, #fff, #c4b5fd);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .chip-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      max-width: 560px;
+      margin-top: 12px;
+    }
+
+    .chip-glow {
+      background: rgba(20, 16, 40, 0.8);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(139,92,246,0.3);
+      padding: 8px 18px;
+      border-radius: 40px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .chip-glow:hover {
+      background: rgba(139, 92, 246, 0.2);
+      border-color: #a78bfa;
+      color: white;
+      transform: translateY(-2px);
+    }
+
+    /* MESSAGE BUBBLE REVAMP */
+    .message-row {
+      display: flex;
+      gap: 12px;
+      max-width: 880px;
+      width: 100%;
+      animation: slideUp 0.25s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .message-row.user {
+      flex-direction: row-reverse;
+      margin-left: auto;
+    }
+    .message-row.ai {
+      margin-right: auto;
+    }
+
+    .msg-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+      background: rgba(139, 92, 246, 0.2);
+      backdrop-filter: blur(4px);
+    }
+
+    .ai .msg-avatar {
+      background: linear-gradient(145deg, #7c3aed, #3b82f6);
+      box-shadow: 0 2px 12px rgba(124, 58, 237, 0.4);
+    }
+    .user .msg-avatar {
+      background: #18142e;
+      border: 1px solid rgba(139, 92, 246, 0.5);
+    }
+
+    .bubble-glass {
+      background: rgba(18, 14, 30, 0.7);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(139, 92, 246, 0.2);
+      border-radius: 24px;
+      border-bottom-left-radius: 6px;
+      padding: 12px 18px;
+      font-size: 0.9rem;
+      line-height: 1.65;
+      color: #e2dcff;
+    }
+
+    .user .bubble-glass {
+      background: linear-gradient(120deg, rgba(79, 70, 229, 0.2), rgba(139, 92, 246, 0.1));
+      border: 1px solid rgba(139, 92, 246, 0.35);
+      border-bottom-right-radius: 6px;
+      border-bottom-left-radius: 20px;
+    }
+
+    .image-preview-inline {
+      margin-top: 10px;
+      max-width: 220px;
+      border-radius: 18px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .image-preview-inline img {
+      width: 100%;
+      display: block;
+    }
+
+    /* INPUT AREA SUPER */
+    .input-modern {
+      flex-shrink: 0;
+      padding: 1rem 1.8rem 1.4rem;
+      background: rgba(5, 3, 15, 0.7);
+      backdrop-filter: blur(24px);
+      border-top: 1px solid var(--glass-edge);
+    }
+
+    .input-container {
+      background: rgba(12, 9, 24, 0.9);
+      border-radius: 32px;
+      border: 1px solid rgba(139, 92, 246, 0.35);
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      padding: 6px 6px 6px 20px;
+      transition: all 0.2s;
+    }
+
+    .input-container:focus-within {
+      border-color: #a78bfa;
+      box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+    }
+
+    .input-container textarea {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: white;
+      font-family: 'Inter', monospace;
+      font-size: 0.9rem;
+      resize: none;
+      padding: 12px 0;
+      outline: none;
+      max-height: 120px;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .photo-btn, .send-action {
+      background: rgba(139,92,246,0.2);
+      border: none;
+      border-radius: 40px;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: #c4b5fd;
+      font-size: 20px;
+      transition: 0.2s;
+    }
+
+    .send-action {
+      background: linear-gradient(135deg, #7c3aed, #4f46e5);
+      color: white;
+      width: auto;
+      padding: 0 24px;
+      font-weight: 600;
+      gap: 8px;
+      font-size: 0.85rem;
+      border-radius: 40px;
+    }
+
+    .photo-btn:hover { background: rgba(139,92,246,0.4); transform: scale(0.97);}
+    .send-action:active { transform: scale(0.96);}
+    .send-action:disabled { opacity: 0.5; }
+
+    .image-preview-temp {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 12px;
+      background: rgba(0,0,0,0.4);
+      border-radius: 60px;
+      padding: 5px 12px 5px 8px;
+      width: fit-content;
+    }
+    .preview-thumb {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      object-fit: cover;
+    }
+    .remove-preview {
+      background: none;
+      border: none;
+      color: #ff9494;
+      cursor: pointer;
+    }
+
+    .typing-dots-modern {
+      display: flex;
+      gap: 6px;
+      padding: 6px 0;
+    }
+    .typing-dots-modern span {
+      width: 8px;
+      height: 8px;
+      background: #a78bfa;
+      border-radius: 50%;
+      animation: wave 1.2s infinite;
+    }
+    @keyframes wave {
+      0%,60%,100%{transform:translateY(0); opacity:0.4;}
+      30%{transform:translateY(-6px); opacity:1;}
+    }
+
+    /* scroll */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #7c3aed; border-radius: 10px; }
+
+    @media (max-width: 550px) {
+      .glass-header { padding: 0.7rem 1rem; }
+      .chat-scroll { padding: 1rem; }
+      .input-modern { padding: 0.8rem 1rem; }
+      .brand-name { font-size: 1.2rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="intro-overlay" id="introOverlay">
+  <div class="intro-content">
+    <div class="intro-logo">
+      <div class="ring"></div>
+      <div class="core">⚡</div>
+    </div>
+    <div class="intro-text">ZanxAI Nexus</div>
+    <div class="intro-sub">Asisten super cerdas · visi masa depan</div>
+    <div class="intro-load-bar">
+      <div class="intro-load-fill"></div>
+    </div>
+  </div>
+</div>
+
+<div class="app-container" id="appContainer">
+  <div class="glass-header">
+    <div class="brand-modern">
+      <div class="brand-icon">⚡</div>
+      <div>
+        <div class="brand-name">ZanxAI</div>
+        <div class="brand-badge">multimodal · cerdas</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn" id="clearChatBtn">🧹 Bersihkan</button>
+    </div>
+  </div>
+
+  <div class="chat-scroll" id="chatScroll">
+    <div class="welcome-modern" id="welcomeScreenModern">
+      <div class="welcome-glow">
+        <div class="avatar-large">⚡</div>
+        <h1>ZanxAI,<br>siap membantu</h1>
+        <p style="color: #9ca3cf; max-width: 280px; margin-top: 6px;">Tanya apapun, kirim foto, atau minta ide kreatif</p>
+      </div>
+      <div class="chip-group">
+        <div class="chip-glow" data-suggest="Buatkan kode neural network sederhana">🧠 Kode AI</div>
+        <div class="chip-glow" data-suggest="Jelaskan teknologi blockchain dengan mudah">🔗 Blockchain</div>
+        <div class="chip-glow" data-suggest="Rekomendasikan film sci-fi terbaik">🎬 Sci-fi</div>
+        <div class="chip-glow" data-suggest="Deskripsikan gambar yang saya kirim (contoh analisis foto)">🖼️ Analisis foto</div>
+        <div class="chip-glow" data-suggest="Tips belajar UI/UX modern">✨ UI/UX tips</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="input-modern">
+    <div class="input-container">
+      <textarea id="userInput" placeholder="Ketik pesan atau unggah foto..." rows="1"></textarea>
+      <div class="action-buttons">
+        <button class="photo-btn" id="galleryBtn" title="Unggah foto dari galeri">📷</button>
+        <button class="send-action" id="sendBtn">✈️ Kirim</button>
+      </div>
+    </div>
+    <div id="imagePreviewArea" style="margin-top: 8px;"></div>
+    <div style="font-size: 0.6rem; text-align: center; color: #5e5a7a; margin-top: 6px;">Enter kirim · foto akan dikirim sebagai pesan terpisah</div>
+  </div>
+</div>
+
+<script>
+  // ------------------------- AI CORE (SAME BACKEND) -------------------------
+  let conversationHistory = [];
+  let currentImageBase64 = null;     // untuk menyimpan foto sementara
+  let typingIndicator = null;
+
+  const chatContainer = document.getElementById("chatScroll");
+  const welcomeDiv = document.getElementById("welcomeScreenModern");
+  const userTextarea = document.getElementById("userInput");
+  const sendBtn = document.getElementById("sendBtn");
+  const clearBtn = document.getElementById("clearChatBtn");
+  const galleryBtn = document.getElementById("galleryBtn");
+  const imagePreviewDiv = document.getElementById("imagePreviewArea");
+
+  // intro logic
+  const intro = document.getElementById("introOverlay");
+  const app = document.getElementById("appContainer");
+
+  setTimeout(() => {
+    if (intro) {
+      intro.style.opacity = "0";
+      setTimeout(() => {
+        intro.style.display = "none";
+        app.classList.add("visible");
+      }, 1000);
+    }
+  }, 2200);
+
+  // helpers
+  function removeWelcomePermanently() {
+    if (welcomeDiv && welcomeDiv.parentNode) welcomeDiv.remove();
+  }
+
+  function addMessageToUI(role, content, imageBase64 = null) {
+    removeWelcomePermanently();
+    const messageDiv = document.createElement("div");
+    messageDiv.className = `message-row ${role}`;
+
+    const avatar = document.createElement("div");
+    avatar.className = "msg-avatar";
+    avatar.innerText = role === "ai" ? "⚡" : "👤";
+
+    const bubble = document.createElement("div");
+    bubble.className = "bubble-glass";
+
+    // jika ada gambar dan role user, tampilkan preview
+    if (role === "user" && imageBase64) {
+      const imgWrap = document.createElement("div");
+      imgWrap.className = "image-preview-inline";
+      const imgEl = document.createElement("img");
+      imgEl.src = imageBase64;
+      imgEl.alt = "uploaded";
+      imgWrap.appendChild(imgEl);
+      bubble.appendChild(imgWrap);
+      const textSpan = document.createElement("div");
+      textSpan.innerHTML = content ? formatMessageText(escapeHtml(content)) : "";
+      bubble.appendChild(textSpan);
+    } else {
+      bubble.innerHTML = role === "ai" ? formatMessageText(content) : escapeHtml(content);
+    }
+
+    messageDiv.appendChild(avatar);
+    messageDiv.appendChild(bubble);
+    chatContainer.appendChild(messageDiv);
+    scrollToBottom();
+  }
+
+  function formatMessageText(text) {
+    if (!text) return "";
+    let formatted = escapeHtml(text);
+    formatted = formatted.replace(/```([\s\S]*?)```/g, "<pre><code>$1</code></pre>");
+    formatted = formatted.replace(/`([^`\n]+)`/g, "<code>$1</code>");
+    formatted = formatted.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+    formatted = formatted.replace(/\*(.+?)\*/g, "<em>$1</em>");
+    formatted = formatted.replace(/\n/g, "<br>");
+    return formatted;
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/[&<>]/g, function(m) {
+      if (m === '&') return '&amp;';
+      if (m === '<') return '&lt;';
+      if (m === '>') return '&gt;';
+      return m;
+    }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(c) {
+      return c;
+    });
+  }
+
+  function showTyping() {
+    removeTyping();
+    const typingDiv = document.createElement("div");
+    typingDiv.className = "message-row ai";
+    typingDiv.id = "typingIndicator";
+    const avatarTyp = document.createElement("div");
+    avatarTyp.className = "msg-avatar";
+    avatarTyp.innerText = "⚡";
+    const bubbleTyp = document.createElement("div");
+    bubbleTyp.className = "bubble-glass";
+    bubbleTyp.innerHTML = `<div class="typing-dots-modern"><span></span><span></span><span></span></div>`;
+    typingDiv.appendChild(avatarTyp);
+    typingDiv.appendChild(bubbleTyp);
+    chatContainer.appendChild(typingDiv);
+    scrollToBottom();
+  }
+
+  function removeTyping() {
+    const el = document.getElementById("typingIndicator");
+    if (el) el.remove();
+  }
+
+  function scrollToBottom() {
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+  }
+
+// API call (SAMA PERSIS DENGAN BACKEND YANG DIBUTUHKAN)
+  async function callAI(messagesArray) {
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: messagesArray })
+    });
+    const data = await response.json();
+    if (!response.ok || data.error) throw new Error(data.error || "Server error");
+    return data.reply;
+  }
+
+  async function sendCoreMessage(text, imageData = null) {
+    if ((!text || text.trim() === "") && !imageData) return false;
+    const finalText = text ? text.trim() : "[Mengirim foto]";
+    const userMsgContent = imageData ? `${finalText}\n[Gambar: foto terlampir]` : finalText;
+    
+    // menambahkan user message ke UI dengan gambar jika ada
+    addMessageToUI("user", finalText, imageData || null);
+    const userHistoryObj = { role: "user", content: userMsgContent };
+    conversationHistory.push(userHistoryObj);
+    
+    // siapkan request ke AI (history dikirim)
+    showTyping();
+    try {
+      const aiReply = await callAI(conversationHistory);
+      removeTyping();
+      addMessageToUI("ai", aiReply);
+      conversationHistory.push({ role: "assistant", content: aiReply });
+    } catch (err) {
+      removeTyping();
+      addMessageToUI("ai", `⚠️ Gagal terhubung ke server: ${err.message}. Pastikan backend berjalan & API key valid.`);
+    }
+    return true;
+  }
+
+  async function handleSend() {
+    let text = userTextarea.value.trim();
+    let imageToSend = currentImageBase64;
+    if (!text && !imageToSend) return;
+    
+    // disable tombol
+    sendBtn.disabled = true;
+    await sendCoreMessage(text, imageToSend);
+    // reset states
+    userTextarea.value = "";
+    userTextarea.style.height = "auto";
+    clearImagePreview();
+    currentImageBase64 = null;
+    sendBtn.disabled = false;
+    userTextarea.focus();
+  }
+
+  // Gambar dari galeri
+  function openGallery() {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      if (file && file.type.startsWith("image/")) {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const base64 = ev.target.result;
+          currentImageBase64 = base64;
+          showImagePreview(base64);
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+    input.click();
+  }
+
+  function showImagePreview(b64) {
+    imagePreviewDiv.innerHTML = "";
+    const container = document.createElement("div");
+    container.className = "image-preview-temp";
+    const thumb = document.createElement("img");
+    thumb.src = b64;
+    thumb.className = "preview-thumb";
+    const captionSpan = document.createElement("span");
+    captionSpan.style.fontSize = "0.75rem";
+    captionSpan.innerText = "1 foto siap";
+    const removeBtn = document.createElement("button");
+    removeBtn.innerText = "✖";
+    removeBtn.className = "remove-preview";
+    removeBtn.onclick = () => clearImagePreview();
+    container.appendChild(thumb);
+    container.appendChild(captionSpan);
+    container.appendChild(removeBtn);
+    imagePreviewDiv.appendChild(container);
+  }
+
+  function clearImagePreview() {
+    currentImageBase64 = null;
+    imagePreviewDiv.innerHTML = "";
+  }
+
+  // suggestions binding
+  function initSuggestions() {
+    document.querySelectorAll(".chip-glow").forEach(chip => {
+      chip.addEventListener("click", (e) => {
+        const suggestion = chip.getAttribute("data-suggest");
+        if (suggestion) {
+          userTextarea.value = suggestion;
+          handleSend();
+        }
+      });
+    });
+  }
+
+  // clear chat (reset history dan UI)
+  function resetChat() {
+    conversationHistory = [];
+    chatContainer.innerHTML = "";
+    // re-insert welcome
+    const newWelcome = document.createElement("div");
+    newWelcome.className = "welcome-modern";
+    newWelcome.id = "welcomeScreenModern";
+    newWelcome.innerHTML = `
+      <div class="welcome-glow">
+        <div class="avatar-large">⚡</div>
+        <h1>ZanxAI,<br>siap membantu</h1>
+        <p style="color: #9ca3cf; max-width: 280px; margin-top: 6px;">Tanya apapun, kirim foto, atau minta ide kreatif</p>
+      </div>
+      <div class="chip-group">
+        <div class="chip-glow" data-suggest="Buatkan kode neural network sederhana">🧠 Kode AI</div>
+        <div class="chip-glow" data-suggest="Jelaskan teknologi blockchain dengan mudah">🔗 Blockchain</div>
+        <div class="chip-glow" data-suggest="Rekomendasikan film sci-fi terbaik">🎬 Sci-fi</div>
+        <div class="chip-glow" data-suggest="Deskripsikan gambar yang saya kirim (contoh analisis foto)">🖼️ Analisis foto</div>
+        <div class="chip-glow" data-suggest="Tips belajar UI/UX modern">✨ UI/UX tips</div>
+      </div>
+    `;
+    chatContainer.appendChild(newWelcome);
+    initSuggestions(); // reattach suggestions
+    clearImagePreview();
+    userTextarea.value = "";
+    userTextarea.focus();
+  }
+
+  // auto-resize textarea
+  userTextarea.addEventListener("input", function() {
+    this.style.height = "auto";
+    this.style.height = Math.min(this.scrollHeight, 120) + "px";
+  });
+  userTextarea.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  });
+
+  galleryBtn.addEventListener("click", openGallery);
+  sendBtn.addEventListener("click", handleSend);
+  clearBtn.addEventListener("click", resetChat);
+
+  // initial suggestions binding
+  setTimeout(() => {
+    initSuggestions();
+  }, 500);
+  // fix welcome remove safe on send
+  window.removeWelcomePermanently = removeWelcomePermanently;
+
+  // juga handle case jika ada gambar dan text kosong: tetap kirim
+  console.log("ZanxAI supermodern UI + gallery ready");
+</script>
+</body>
+</html>
